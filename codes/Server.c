@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
     exit(1);
   }
   printf("Cliente conectado no IP: %s com a porta: %i\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+  printf("Aguardando mensagem...\n\n");
 
   while (1)
   {
@@ -77,6 +78,7 @@ int main(int argc, char *argv[])
     }
     printf("Cliente: %s", client_message);
 
+    printf("Servidor: ");
     fgets(server_message, sizeof(server_message), stdin);
 
     if (send(client_FD, server_message, strlen(server_message), 0) < 0)

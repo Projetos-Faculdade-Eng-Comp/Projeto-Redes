@@ -35,8 +35,6 @@ int main(int argc, char *argv[])
   }
   printf("Socket criado com sucesso.\n");
 
-  // server = gethostbyname(argv[1]); //PRECISA DISSO AQUI?
-
   port_number = atoi(argv[2]);
 
   server_address.sin_family = AF_INET;
@@ -48,13 +46,14 @@ int main(int argc, char *argv[])
     printf("Nao foi possivel realizar a conexao.\n");
     exit(1);
   }
-  printf("Conexao com o servidor realizada com sucesso.\n");
+  printf("Conexao com o servidor realizada com sucesso.\n\n");
 
   while (1)
   {
     memset(server_message, '\0', sizeof(server_message));
     memset(client_message, '\0', sizeof(client_message));
 
+    printf("Cliente: ");
     fgets(client_message, sizeof(client_message), stdin);
 
     if (send(client_FD, client_message, strlen(client_message), 0) < 0)
