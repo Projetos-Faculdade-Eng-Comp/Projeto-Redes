@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 {
   if (argc == 2)
   {
-    printf("Servidor iniciando na porta %s...\n", argv[1]);
+    printf("Iniciando servidor na porta %s...\n", argv[1]);
   }
   else if (argc > 2)
   {
