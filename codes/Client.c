@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 {
   if (argc == 3)
   {
-    printf("Iniciando conexao no endereço IP %s e na porta %s...\n", argv[1], argv[2]);
+    printf("Iniciando conexao no endereço IP %s na porta %s...\n", argv[1], argv[2]);
   }
   else if (argc > 3)
   {
@@ -46,7 +46,8 @@ int main(int argc, char *argv[])
     printf("Nao foi possivel realizar a conexao.\n");
     exit(1);
   }
-  printf("Conexao com o servidor realizada com sucesso.\n\n");
+  printf("Conexao com o servidor realizada com sucesso.\n");
+  printf("Digite %s para encerrar a conexao\n\n", "Bye");
 
   while (1)
   {

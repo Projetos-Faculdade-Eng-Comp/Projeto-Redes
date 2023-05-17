@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
     exit(1);
   }
   printf("Cliente conectado no IP: %s com a porta: %i\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+  printf("Digite '%s' para encerrar a conexao\n", "Bye");
   printf("Aguardando mensagem...\n\n");
 
   while (1)
