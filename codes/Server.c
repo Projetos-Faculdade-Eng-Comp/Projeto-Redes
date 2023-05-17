@@ -4,6 +4,48 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+
+#define MAX_CLIENTS 2
+
+int client_sockets[MAX_CLIENTS];
+pthread_t client_threads[MAX_CLIENTS];
+int connected_clients = 0;
+
+void *handle_client(void *arg)
+{
+  int client_FD = *(int *)arg;
+  char client_message[2000];
+
+  while (1)
+  {
+    memset(client_message, '\0', sizeof(client_message));
+
+    if (recv(client_FD, client_message, sizeof(client_message), 0) < 0)
+    {
+      printf("Nao foi possivel receber a mensagem.\n");
+      break;
+    }
+    printf("Cliente: %s", client_message);
+
+    int other_client = (client_FD == client_sockets[0]) ? client_sockets[1] : client_sockets[0];
+
+    if (send(other_client, client_message, strlen(client_message), 0) < 0)
+    {
+      printf("Nao foi possivel enviar a mensagem.\n");
+      break;
+    }
+
+    if (strncmp(client_message, "Bye", 3) == 0)
+    {
+      printf("Conexão com cliente encerrada.\n");
+      break;
+    }
+  }
+
+  close(client_FD);
+  pthread_exit(NULL);
+}
 
 int main(int argc, char *argv[])
 {
@@ -24,7 +66,6 @@ int main(int argc, char *argv[])
 
   int server_FD, client_FD, port_number, client_size;
   struct sockaddr_in server_address, client_address;
-  char server_message[2000], client_message[2000];
 
   server_FD = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -48,52 +89,45 @@ int main(int argc, char *argv[])
   }
   printf("O socket foi vinculado a porta com sucesso.\n");
 
-  if (listen(server_FD, 2) < 0)
+  if (listen(server_FD, MAX_CLIENTS) < 0)
   {
     printf("Erro ao preparar a fila de conexoes.\n");
     exit(1);
   }
   printf("Aguardando novas conexoes...\n");
 
-  client_size = sizeof(client_address);
-  client_FD = accept(server_FD, (struct sockaddr *)&client_address, &client_size);
-
-  if (client_FD < 0)
+  while (connected_clients < MAX_CLIENTS)
   {
-    printf("Nao foi possivel realizar a conexao.\n");
-    exit(1);
+    client_size = sizeof(client_address);
+    client_FD = accept(server_FD, (struct sockaddr *)&client_address, &client_size);
+
+    if (client_FD < 0)
+    {
+      printf("Nao foi possivel realizar a conexao.\n");
+      continue;
+    }
+    printf("Cliente conectado no IP: %s com a porta: %i\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+
+    client_sockets[connected_clients] = client_FD;
+
+    if (pthread_create(&client_threads[connected_clients], NULL, handle_client, &client_sockets[connected_clients]) != 0)
+    {
+      printf("Erro ao criar thread para o cliente.\n");
+      continue;
+    }
+
+    connected_clients++;
   }
-  printf("Cliente conectado no IP: %s com a porta: %i\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+
+  printf("Numero maximo de clientes conectados.\n");
+  printf("Digite '%s' para encerrar a conexao\n", "Bye");
   printf("Aguardando mensagem...\n\n");
 
-  while (1)
+  for (int i = 0; i < connected_clients; i++)
   {
-    memset(server_message, '\0', sizeof(server_message));
-    memset(client_message, '\0', sizeof(client_message));
-
-    if (recv(client_FD, client_message, sizeof(client_message), 0) < 0)
-    {
-      printf("Nao foi possivel receber a mensagem.\n");
-      exit(1);
-    }
-    printf("Cliente: %s", client_message);
-
-    printf("Servidor: ");
-    fgets(server_message, sizeof(server_message), stdin);
-
-    if (send(client_FD, server_message, strlen(server_message), 0) < 0)
-    {
-      printf("Nao foi possivel enviar a mensagem.\n");
-      exit(1);
-    }
-
-    if (strncmp("Bye", client_message, 3) == 0)
-    {
-      break;
-    }
+    pthread_join(client_threads[i], NULL);
   }
 
-  close(client_FD);
   close(server_FD);
 
   return 0;

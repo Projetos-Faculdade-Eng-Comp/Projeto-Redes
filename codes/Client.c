@@ -4,12 +4,42 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+
+void *
+receive_messages(void *arg)
+{
+  int client_FD = *(int *)arg;
+  char server_message[2000];
+
+  while (1)
+  {
+    memset(server_message, 0, sizeof(server_message));
+
+    if (recv(client_FD, server_message, sizeof(server_message), 0) < 0)
+    {
+      printf("Nao foi possivel receber a mensagem.\n");
+      break;
+    }
+
+    printf("%s", server_message);
+
+    if (strncmp(server_message, "Bye", 3) == 0)
+    {
+      printf("Conexão com o cliente encerrada.\n");
+      break;
+    }
+  }
+
+  close(client_FD);
+  pthread_exit(NULL);
+}
 
 int main(int argc, char *argv[])
 {
   if (argc == 3)
   {
-    printf("Iniciando conexao no endereço IP %s e na porta %s...\n", argv[1], argv[2]);
+    printf("Iniciando conexao no endereço IP %s na porta %s...\n", argv[1], argv[2]);
   }
   else if (argc > 3)
   {
@@ -24,7 +54,8 @@ int main(int argc, char *argv[])
 
   int client_FD, port_number;
   struct sockaddr_in server_address;
-  char server_message[2000], client_message[2000];
+  pthread_t receive_thread;
+  char client_message[2000];
 
   client_FD = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -46,11 +77,19 @@ int main(int argc, char *argv[])
     printf("Nao foi possivel realizar a conexao.\n");
     exit(1);
   }
-  printf("Conexao com o servidor realizada com sucesso.\n\n");
+  printf("Conexao com o servidor realizada com sucesso.\n");
+
+  if (pthread_create(&receive_thread, NULL, receive_messages, &client_FD) != 0)
+  {
+    printf("Erro ao criar thread.\n");
+    close(client_FD);
+    exit(1);
+  }
+  printf("Thread criada com sucesso.\n");
+  printf("Digite %s para encerrar a conexao\n\n", "Bye");
 
   while (1)
   {
-    memset(server_message, '\0', sizeof(server_message));
     memset(client_message, '\0', sizeof(client_message));
 
     printf("Cliente: ");
@@ -59,21 +98,17 @@ int main(int argc, char *argv[])
     if (send(client_FD, client_message, strlen(client_message), 0) < 0)
     {
       printf("Nao foi possivel enviar a mensagem.\n");
-      exit(1);
+      break;
     }
 
-    if (recv(client_FD, server_message, sizeof(server_message), 0) < 0)
+    if (strncmp(client_message, "Bye", 3) == 0)
     {
-      printf("Nao foi possivel receber a mensagem.\n");
-      exit(1);
-    }
-    printf("Servidor: %s", server_message);
-
-    if (strncmp("Bye", server_message, 3) == 0)
-    {
+      printf("Conexão encerrada pelo cliente.\n");
       break;
     }
   }
+
+  pthread_join(receive_thread, NULL);
 
   close(client_FD);
 
